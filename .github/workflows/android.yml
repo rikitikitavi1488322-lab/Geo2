@@ -40,7 +40,9 @@ jobs:
         pip install buildozer cython virtualenv
 
     - name: Build Android with Buildozer
-      run: buildozer android clean && buildozer android debug
+      run: |
+       buildozer android clean
+       buildozer -v android debug
 
     - name: build apk
       run: |
