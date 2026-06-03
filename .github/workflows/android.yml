@@ -1,10 +1,7 @@
 name: Build with Buildozer
 run: buildozer android clean && buildozer android debug
 env:
- JOBS: 1
-
-
-
+  JOBS: 1
 
 on:
   push:
