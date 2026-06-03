@@ -1,7 +1,4 @@
-name: Build with Buildozer
-run: buildozer android clean && buildozer android debug
-env:
-  JOBS: 1
+name: Build Android APK with Buildozer
 
 on:
   push:
@@ -12,9 +9,15 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
+    env:
+      JOBS: 1
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
+
+    - name: Build Android with Buildozer
+      run: buildozer android clean && buildozer android debug
 
     - name: Get Date
       id: get-date
