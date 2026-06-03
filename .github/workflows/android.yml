@@ -52,6 +52,7 @@ jobs:
     - name: build apk
       run: |
         # Автоматически принимаем все лицензии Android SDK перед сборкой
+        yes | sdkmanager --licenses
         yes | buildozer -v android debug
         
     - name: Upload APK artifact
