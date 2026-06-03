@@ -47,11 +47,6 @@ jobs:
        dotnet: true
        haskell: true
        large-packages: true
-
-
-    - name: Build Android with Buildozer
-      run: |
-       buildozer android clean
     
 
     - name: build apk
