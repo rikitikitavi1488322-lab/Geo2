@@ -1,4 +1,9 @@
-name: Build Android APK with Buildozer
+buildozer android clean
+name: Build with Buildozer
+  run: buildozer android debug
+  env:
+    JOBS: 1
+
 
 on:
   push:
