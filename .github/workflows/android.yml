@@ -9,8 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # Используем официальный Docker-образ от разработчиков Kivy
     container:
-      image: gizmocuz/buildozer:latest
+      image: kivy/buildozer:master
 
     steps:
     - name: Checkout code
@@ -19,6 +20,11 @@ jobs:
     - name: Configure Git Safe Directory
       run: |
         git config --global --add safe.directory /__w/geotelo-gis/geotelo-gis
+
+    - name: Clean previous failed builds
+      run: |
+        # Полная очистка временных файлов сборки для исключения старых конфликтов
+        buildozer android clean
 
     - name: Build APK with Buildozer
       run: |
