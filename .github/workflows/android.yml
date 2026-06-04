@@ -7,8 +7,7 @@ on:
 
 jobs:
   build:
-    # Используем Ubuntu 20.04 для стабильной работы старых конфигураторов arch/configure
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout code
@@ -60,12 +59,14 @@ jobs:
     - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade "cython<3.0.0" virtualenv  # Ограничиваем Cython для совместимости с Kivy 2.3.0
+        pip install --upgrade "cython<3.0.0" virtualenv
         pip install --upgrade buildozer
 
     - name: Build APK with Buildozer
       run: |
-        # Запуск сборки с автоматическим принятием лицензий
+        # Очищаем дефектные флаги компилятора, которые ломают сборку Pillow
+        export CFLAGS="-Wno-error=implicit-function-declaration"
+        # Запускаем сборку
         yes | buildozer -v android debug
 
     - name: Upload APK Artifact
