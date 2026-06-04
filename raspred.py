@@ -14,8 +14,11 @@ def detect_d(c1, c2, sp_sloy):
             best_layer = s
 
     if best_layer and min_found_d2 < best_layer.max_d2:
-        best_layer.sp_pix.add(c1)  # .add() вместо .append(), так как sp_pix — это set
-
+        if isinstance(best_layer.sp_pix, set):
+            best_layer.sp_pix.add(c1)
+        else:
+            best_layer.sp_pix.append(c1)
+            
 def detect_clas(c, rgb_color, sp_sloy):
     noviy_sloy = clas.Sloy(name=c, rgb=rgb_color, sp_pix=[], vozrast="???", description="")
     sp_sloy.append(noviy_sloy)
