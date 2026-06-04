@@ -9,20 +9,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # Запускаем сборку внутри изолированного официального Docker-контейнера Kivy
+    container:
+      image: gizmocuz/buildozer:latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Используем официальный и самый стабильный экшен для сборки Kivy/Buildozer
-    - name: Buildozer Action
-      uses: ArtemSanya/buildozer-action@v1
-      with:
-        buildozer_version: master
-        # Автоматически подставит нужные параметры команды:
-        command: buildozer -v android debug
+    - name: Configure Git Safe Directory
+      run: |
+        git config --global --add safe.directory /__w/geotelo-gis/geotelo-gis
+        # Позволяет контейнеру корректно читать файлы репозитория
+
+    - name: Build APK with Buildozer
+      run: |
+        # Принудительно принимаем все лицензии и собираем проект
+        yes | buildozer -v android debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Geotelo-GIS-Android-APK
         path: bin/*.apk
+        if-no-files-found: error
