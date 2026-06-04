@@ -3,62 +3,88 @@ name: Build Android APK with Buildozer
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой в интерфейсе GitHub
 
 jobs:
   build:
     runs-on: ubuntu-22.04
 
-    env:
-      JOBS: 1
-
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v4
 
-    - name: Get Date
-      id: get-date
-      run: |
-        echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
     - name: Cache Buildozer global directory
-      uses: actions/cache@v5
+      uses: actions/cache@v4
       with:
         path: ~/.buildozer
-        key: buildozer-global-${{ runner.os }}-${{ steps.get-date.outputs.date }}
+        key: buildozer-global-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          buildozer-global-${{ runner.os }}-
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Cache Android SDK / NDK
+      uses: actions/cache@v4
       with:
-        python-version: '3.11'
+        path: ~/.buildozer/android/platform/android-sdk
+        key: buildozer-android-sdk-${{ runner.os }}
 
-    - name: Install Buildozer and dependencies
+    - name: Install System Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libsqlite3-dev gawk unzip git ccache zip libffi-dev libssl-dev
-        pip install --upgrade pip
-        pip install buildozer cython virtualenv
+        sudo apt-get install -y \
+          build-essential \
+          git \
+          ffmpeg \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libsdl2-mixer-dev \
+          libsdl2-ttf-dev \
+          libportmidi-dev \
+          libswscale-dev \
+          libavformat-dev \
+          libavcodec-dev \
+          zlib1g-dev \
+          libgstreamer1.0-dev \
+          gstreamer1.0-plugins-base \
+          gstreamer1.0-plugins-good \
+          libsqlite3-dev \
+          sqlite3 \
+          bzip2 \
+          libbz2-dev \
+          libssl-dev \
+          openssl \
+          libgdbm-dev \
+          libgdbm-compat-dev \
+          liblzma-dev \
+          libreadline-dev \
+          libncursesw5-dev \
+          libffi-dev \
+          uuid-dev \
+          libgomp1 \
+          openjdk-17-jdk \
+          unzip \
+          zip \
+          ccache
 
-    - name: Free Disk Space
-      uses: jlumbroso/free-disk-space@v1.3.1
-      with:
-       tool-cache: false
-       android: false
-       dotnet: true
-       haskell: true
-       large-packages: true
-
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: build apk
+    - name: Install Python Dependencies
       run: |
-        # Автоматически принимаем все лицензии Android SDK перед сборкой
-        yes | sdkmanager --licenses
+        python -m pip install --upgrade pip
+        pip install --upgrade cython virtualenv
+        # Устанавливаем стабильную версию buildozer
+        pip install git+https://github.com/kivy/buildozer.git@master
+
+    - name: Build APK with Buildozer
+      run: |
+        # yes | автоматически отвечает "y" на все запросы лицензий Android SDK
         yes | buildozer -v android debug
         
-    - name: Upload APK artifact
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Geotelo-Android-APK
+        name: Geotelo-GIS-Android-APK
         path: bin/*.apk
+        if-no-files-found: error
