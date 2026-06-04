@@ -37,15 +37,11 @@ jobs:
     - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Ставим заведомо стабильный Cython 0.29.33, который не ругается на cgl_mock.pyx
-        pip install "cython==0.29.33" virtualenv
+        # Принудительно ставим старую ветку Cython, для которой писался Kivy 2.3.0
+        pip install "cython<3.0.0" virtualenv
         pip install git+https://github.com/kivy/buildozer.git@master
 
     - name: Build APK with Buildozer
       run: |
-        # Отключаем превращение предупреждений Cython и GCC в критические ошибки
-        export CFLAGS="-w"
-        export ACTION_ENV="WNO_ERROR=1"
-        
-        # Запуск сборки
+        # Запуск чистой сборки
         yes | buildozer -v android debug
