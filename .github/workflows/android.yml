@@ -42,8 +42,8 @@ jobs:
 
     - name: Build APK with Buildozer
       run: |
-        # Подаем сигналы "y" (yes) стабильным потоком, исключая Broken pipe
-        printf 'y\n'.repeat(100) | buildozer -v android debug
+        # Генерируем ровно 100 ответов "y" для безопасного принятия лицензий Google SDK
+        yes y | head -n 100 | buildozer -v android debug
         
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
