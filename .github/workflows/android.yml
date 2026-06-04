@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    # Используем стандартную стабильную виртуальную машину
     runs-on: ubuntu-22.04
 
     steps:
@@ -18,55 +19,33 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install System Dependencies
+    - name: Install Essential System Dependencies
       run: |
         sudo apt-get update
+        # Устанавливаем только базовый набор для компиляции C-расширений Python и Android SDK
         sudo apt-get install -y \
           build-essential \
           git \
-          ffmpeg \
-          libsdl2-dev \
-          libsdl2-image-dev \
-          libsdl2-mixer-dev \
-          libsdl2-ttf-dev \
-          libportmidi-dev \
-          libswscale-dev \
-          libavformat-dev \
-          libavcodec-dev \
-          zlib1g-dev \
-          libgstreamer1.0-dev \
-          gstreamer1.0-plugins-base \
-          gstreamer1.0-plugins-good \
+          zip \
+          unzip \
+          openjdk-17-jdk \
           libsqlite3-dev \
-          sqlite3 \
           bzip2 \
           libbz2-dev \
           libssl-dev \
-          openssl \
-          libgdbm-dev \
-          libgdbm-compat-dev \
-          liblzma-dev \
-          libreadline-dev \
-          libncursesw5-dev \
           libffi-dev \
-          uuid-dev \
-          libgomp1 \
-          openjdk-17-jdk \
-          unzip \
-          zip \
           ccache
 
     - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade "cython<3.0.0" virtualenv
-        pip install --upgrade buildozer
+        # Ограничиваем версию Cython для полной совместимости с Kivy 2.3.0
+        pip install "cython<3.0.0" virtualenv
+        pip install git+https://github.com/kivy/buildozer.git@master
 
     - name: Build APK with Buildozer
       run: |
-        # Очищаем дефектные флаги компилятора, которые ломают сборку Pillow
-        export CFLAGS="-Wno-error=implicit-function-declaration"
-        # Запускаем сборку
+        # Запуск сборки с автоматическим согласием на лицензии Google
         yes | buildozer -v android debug
 
     - name: Upload APK Artifact
