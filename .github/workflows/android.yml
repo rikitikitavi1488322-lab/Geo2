@@ -47,7 +47,9 @@ jobs:
        dotnet: true
        haskell: true
        large-packages: true
-    
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
     - name: build apk
       run: |
