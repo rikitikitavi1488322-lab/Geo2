@@ -42,11 +42,15 @@ jobs:
 
     - name: Build APK with Buildozer
       run: |
-        # Передаем переменную окружения, которая принудительно одобряет все лицензии Android SDK автоматически
-        export ANDROID_濃_HOME=$HOME/.buildozer/android/platform/android-sdk
+        # 1. Запускаем предварительную инициализацию Android SDK, чтобы создались папки
+        buildozer android list || true
         
-        # Запускаем сборку в режиме автоматического согласия
-        buildozer android debug
+        # 2. Принудительно подписываем ВСЕ лицензии Android SDK штатными средствами Google
+        mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+        echo -e "\n2c40c06d1d38eae19811b98511d09a31010e958f\n84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910\n89ac3033e0a62c11b6d206d7463ea2748a3ea30e\nb7a869d6f77cce83c14da57a462e07907532a22a\n843dc6c5b85f740f10f2d65482e1680d342167b3" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+        
+        # 3. Запуск основной чистой сборки
+        buildozer -v android debug
         
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
