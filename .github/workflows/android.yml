@@ -38,14 +38,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install virtualenv
-        # Устанавливаем стабильный билд вилза самого buildozer
         pip install git+https://github.com/kivy/buildozer.git@master
 
     - name: Build APK with Buildozer
       run: |
-        # Запуск сборки
-        yes | buildozer -v android debug
-
+        # Собираем БЕЗ утилиты yes, используя внутренний флаг Buildozer для лицензий
+        buildozer -v android debug --accept-licenses
+        
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
