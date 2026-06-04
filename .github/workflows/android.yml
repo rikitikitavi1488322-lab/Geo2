@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Запускаем сборку внутри изолированного официального Docker-контейнера Kivy
     container:
       image: gizmocuz/buildozer:latest
 
@@ -20,11 +19,9 @@ jobs:
     - name: Configure Git Safe Directory
       run: |
         git config --global --add safe.directory /__w/geotelo-gis/geotelo-gis
-        # Позволяет контейнеру корректно читать файлы репозитория
 
     - name: Build APK with Buildozer
       run: |
-        # Принудительно принимаем все лицензии и собираем проект
         yes | buildozer -v android debug
 
     - name: Upload APK Artifact
