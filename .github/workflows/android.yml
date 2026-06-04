@@ -37,11 +37,18 @@ jobs:
     - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Принудительно ставим старую ветку Cython, для которой писался Kivy 2.3.0
-        pip install "cython<3.0.0" virtualenv
+        pip install virtualenv
+        # Устанавливаем стабильный билд вилза самого buildozer
         pip install git+https://github.com/kivy/buildozer.git@master
 
     - name: Build APK with Buildozer
       run: |
-        # Запуск чистой сборки
+        # Запуск сборки
         yes | buildozer -v android debug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Geotelo-GIS-Android-APK
+        path: bin/*.apk
+        if-no-files-found: error
