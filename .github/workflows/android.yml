@@ -13,12 +13,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install Essential System Dependencies
+    - name: Install System Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -26,7 +35,6 @@ jobs:
           git \
           zip \
           unzip \
-          openjdk-17-jdk \
           libsqlite3-dev \
           bzip2 \
           libbz2-dev \
@@ -42,8 +50,11 @@ jobs:
 
     - name: Build APK with Buildozer
       run: |
-        # Генерируем ровно 100 ответов "y" для безопасного принятия лицензий Google SDK
-        yes y | head -n 100 | buildozer -v android debug
+        # Указываем Buildozer использовать уже настроенный и одобренный системный Android SDK
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        
+        # Просто чистый запуск без перенаправлений потоков
+        buildozer -v android debug
         
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
