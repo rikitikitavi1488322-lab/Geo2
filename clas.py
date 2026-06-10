@@ -20,7 +20,11 @@ class Sloy():
 
     @classmethod
     def from_dict(cls, data):
-        """Создает объект Sloy на основе словаря из JSON"""
+        """Создает объект Sloy на основе словаря из JSON.
+        
+        Примечание: после JSON-сериализации кортежи (x, y) превращаются в списки [x, y].
+        Конструктор обрабатывает это корректно через set(tuple(p) for p in sp_pix).
+        """
         return cls(
             name=data["name"],
             rgb=data["rgb"],

@@ -20,11 +20,11 @@ def detect_d(c1, c2, sp_sloy):
             best_layer.sp_pix.append(c1)
             
 def detect_clas(c, rgb_color, sp_sloy):
-    noviy_sloy = clas.Sloy(name=c, rgb=rgb_color, sp_pix=[], vozrast="???", description="")
+    noviy_sloy = clas.Sloy(name=c, rgb=rgb_color, sp_pix=set(), vozrast="???", description="")
     sp_sloy.append(noviy_sloy)
 
 def create_custom_layer(name, rgb_color, sp_sloy, min_d2=850):
     """Создает новый пользовательский пустой слой"""
-    noviy_sloy = clas.Sloy(name=name, rgb=rgb_color, sp_pix=[], vozrast="???", description="", max_d2=min_d2)
+    noviy_sloy = clas.Sloy(name=name, rgb=rgb_color, sp_pix=set(), vozrast="???", description="", max_d2=min_d2)
     sp_sloy.append(noviy_sloy)
     return noviy_sloy

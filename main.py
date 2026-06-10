@@ -6,6 +6,14 @@ import os
 import raspred
 import clas
 
+
+import georef
+geo_system = georef.GeoReferencer()
+control_points = []
+
+import numpy as np
+elevation_matrix = None
+
 status_message = "Система готова"
 karta = 'geo2.jpg'
 
@@ -104,34 +112,6 @@ def filter_isolated_pixels():
                 filtered_pix.add(pt)
         s.sp_pix = filtered_pix
 
-def save_project(project_name="project_save.json"):
-    global karta, sp_sloy
-    project_data = {
-        "karta": karta,
-        "layers": [layer.to_dict() for layer in sp_sloy]
-    }
-    with open(project_name, "w", encoding="utf-8") as f:
-        json.dump(project_data, f, ensure_ascii=False, indent=4)
-    print("Проект успешно сохранен!")
-
-def load_project(project_name="project_save.json"):
-    global karta, sp_sloy
-    if not os.path.exists(project_name):
-        print(f"Файл проекта {project_name} не найден!")
-        return False
-        
-    print(f"Загрузка проекта {project_name}...")
-    with open(project_name, "r", encoding="utf-8") as f:
-        project_data = json.load(f)
-        
-    karta = project_data["karta"]
-    open_file(karta)
-    
-    sp_sloy.clear()
-    for layer_dict in project_data["layers"]:
-        sp_sloy.append(clas.Sloy.from_dict(layer_dict))
-    print(f"Успешно загружено слоев: {len(sp_sloy)}")
-    return True
 
 def add_new_empty_layer(name, rgb_color):
     global sp_sloy, min_d2
@@ -143,9 +123,10 @@ def add_new_empty_layer(name, rgb_color):
     return True, "Слой успешно создан"
 
 def main_all(karta_input):
-    global status_message, sp_sloy, k_clusters, min_d2
+    global status_message, sp_sloy, k_clusters, min_d2, karta # ДОБАВЛЕНО: karta в global
     
     status_message = "Шаг 1/5: Загрузка графического файла..."
+    karta = karta_input # ДОБАВЛЕНО: сохраняем актуальный путь к карте
     open_file(karta_input)
     
     status_message = "Шаг 2/5: Анализ цветовой матрицы..."
@@ -171,3 +152,121 @@ def main_all(karta_input):
     filter_isolated_pixels()
     
     status_message = "Система готова"
+
+
+def save_project(project_name="project_save.json"):
+    global karta, sp_sloy, control_points
+    project_data = {
+        "karta": karta,
+        "control_points": control_points,
+        "layers": [layer.to_dict() for layer in sp_sloy]
+    }
+    with open(project_name, "w", encoding="utf-8") as f:
+        json.dump(project_data, f, ensure_ascii=False, indent=4)
+    print("Проект успешно сохранен!")
+    return True # ДОБАВЛЕНО: чтобы интерфейс Kivy понимал, что сохранение прошло успешно
+
+
+def load_project(project_name="project_save.json"):
+    global karta, sp_sloy, control_points # ИСПРАВЛЕНО: добавлен control_points в список global
+    if not os.path.exists(project_name):
+        print(f"Файл проекта {project_name} не найден!")
+        return False
+        
+    print(f"Загрузка проекта {project_name}...")
+    with open(project_name, "r", encoding="utf-8") as f:
+        project_data = json.load(f)
+        
+    karta = project_data["karta"]
+    open_file(karta)
+    
+    # Теперь это корректно перезапишет глобальную переменную
+    control_points = project_data.get("control_points", [])
+    if len(control_points) >= 3:
+        geo_system.calibrate(control_points)
+    
+    sp_sloy.clear()
+    for layer_dict in project_data["layers"]:
+        sp_sloy.append(clas.Sloy.from_dict(layer_dict))
+    print(f"Успешно загружено слоев: {len(sp_sloy)}")
+    return True
+    
+    
+
+def compute_all_elevations(hgt_folder="dem_data"):
+    """
+    Высокооптимизированный расчет высот для каждого пикселя карты.
+    Использует meshgrid из numpy для мгновенного вычисления.
+    """
+    global elevation_matrix, x, y, geo_system
+    
+    if not geo_system or not geo_system.is_calibrated:
+        print("Ошибка: Система координат не откалибрована!")
+        return False
+
+    print("Запуск глобального расчета рельефа...")
+    
+    # 1. Извлекаем коэффициенты аффинного преобразования из вашего georef.py
+    A, B, C = geo_system.trans_matrix['lat']
+    D, E, F = geo_system.trans_matrix['lon']
+    
+    # 2. Создаем сетку координат пикселей (векторизация)
+    px_indices = np.arange(x)
+    py_indices = np.arange(y)
+    PX, PY = np.meshgrid(px_indices, py_indices, indexing='ij')
+    
+    # 3. Мгновенно вычисляем Lat и Lon для каждого пикселя матрицы
+    LATS = A * PX + B * PY + C
+    LONS = D * PX + E * PY + F
+    
+    # Инициализируем итоговую матрицу высот (тип int16 экономит память)
+    elevation_matrix = np.zeros((x, y), dtype=np.int16)
+    
+    # 4. Находим, в какие географические квадраты (плитки) попадает карта
+    lat_floors = np.floor(LATS).astype(int)
+    lon_floors = np.floor(LONS).astype(int)
+    unique_tiles = set(zip(lat_floors.ravel(), lon_floors.ravel()))
+    
+    # 5. Обрабатываем каждую необходимую плитку .hgt
+    for lat_floor, lon_floor in unique_tiles:
+        lat_char = 'N' if lat_floor >= 0 else 'S'
+        lon_char = 'E' if lon_floor >= 0 else 'W'
+        filename = f"{lat_char}{abs(lat_floor):02d}{lon_char}{abs(lon_floor):03d}.hgt"
+        filepath = os.path.join(hgt_folder, filename)
+        
+        # Маска для пикселей, которые относятся к текущему файлу .hgt
+        tile_mask = (lat_floors == lat_floor) & (lon_floors == lon_floor)
+        if not np.any(tile_mask):
+            continue
+            
+        if os.path.exists(filepath):
+            # Читаем файл матрицы высот напрямую в массив numpy за пару миллисекунд
+            # '>i2' означает Big-Endian 16-bit signed integer (стандарт SRTM)
+            hgt_grid = np.fromfile(filepath, dtype='>i2').reshape((1201, 1201))
+            
+            # Считаем локальное смещение внутри плитки (от 0.0 до 1.0)
+            d_lats = LATS[tile_mask] - lat_floor
+            d_lons = LONS[tile_mask] - lon_floor
+            
+            # Переводим в индексы матрицы матрицы SRTM (1201x1201)
+            rows = ((1.0 - d_lats) * 1200).astype(int)
+            cols = (d_lons * 1200).astype(int)
+            
+            # Защита от выхода за границы индексов
+            rows = np.clip(rows, 0, 1200)
+            cols = np.clip(cols, 0, 1200)
+            
+            # Вытаскиваем высоты для группы пикселей
+            heights = hgt_grid[rows, cols]
+            # -32768 — стандартный флаг отсутствия данных в SRTM (например, море), меняем на 0
+            heights[heights == -32768] = 0
+            
+            # Записываем высоты обратно в глобальную матрицу
+            elevation_matrix[tile_mask] = heights
+            print(f"Плитка {filename} успешно наложена на карту.")
+        else:
+            print(f"Внимание: Файл {filename} отсутствует. Высоты этого сектора сброшены в 0.")
+            elevation_matrix[tile_mask] = 0
+            
+    print("Глобальная матрица высот успешно построена!")
+    return True
