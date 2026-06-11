@@ -1,0 +1,49 @@
+name: Build APK with Buildozer
+
+# Скрипт будет запускаться при пуше в ветку main или вручную (workflow_dispatch)
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ВАЖНО: Создаем папку dem_data и пустой файл внутри.
+      # Git и Buildozer могут игнорировать абсолютно пустые папки, 
+      # поэтому мы кладем туда скрытый файл .gitkeep
+      - name: Create dem_data folder
+        run: |
+          mkdir -p dem_data
+          touch dem_data/.gitkeep
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libffi-dev libssl-dev libltdl-dev
+          sudo apt-get install -y zip unzip git openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev
+          
+      - name: Install Buildozer and Cython
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython virtualenv
+
+      - name: Build APK
+        # Запускаем сборку. y - автоматически соглашаться с лицензиями Android SDK
+        run: yes | buildozer android debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geotelo-app
+          path: bin/*.apk
