@@ -1,6 +1,5 @@
 name: Build APK with Buildozer
 
-# Скрипт будет запускаться при пуше в ветку main или вручную (workflow_dispatch)
 on:
   push:
     branches: [ main, master ]
@@ -14,9 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ВАЖНО: Создаем папку dem_data и пустой файл внутри.
-      # Git и Buildozer могут игнорировать абсолютно пустые папки, 
-      # поэтому мы кладем туда скрытый файл .gitkeep
+      # Создаем папку dem_data
       - name: Create dem_data folder
         run: |
           mkdir -p dem_data
@@ -27,11 +24,19 @@ jobs:
         with:
           python-version: '3.10'
 
+      # ЧЕТКАЯ НАСТРОЙКА JAVA 17 (Это решит проблему с Package the application)
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Устанавливаем остальные системные зависимости (уже без openjdk)
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libffi-dev libssl-dev libltdl-dev
-          sudo apt-get install -y zip unzip git openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev
+          sudo apt-get install -y zip unzip git autoconf libtool pkg-config zlib1g-dev
           
       - name: Install Buildozer and Cython
         run: |
@@ -39,7 +44,6 @@ jobs:
           pip install buildozer cython virtualenv
 
       - name: Build APK
-        # Запускаем сборку. y - автоматически соглашаться с лицензиями Android SDK
         run: yes | buildozer android debug
 
       - name: Upload APK artifact
