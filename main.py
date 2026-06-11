@@ -270,3 +270,8 @@ def compute_all_elevations(hgt_folder="dem_data"):
             
     print("Глобальная матрица высот успешно построена!")
     return True
+
+# В самом конце твоего файла main.py:
+if __name__ == "__main__":
+    from interface import MyApp
+    MyApp().run()
