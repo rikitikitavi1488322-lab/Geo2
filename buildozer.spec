@@ -12,6 +12,8 @@ package.domain = org.test
 # (str) Source code where the main.py live
 source.dir = .
 
+source.main = interface.py
+
 # (list) Source files to include (let empty to include all the files)
 source.include_exts = py, png, jpg, jpeg, kv, atlas, json, hgt
 
@@ -35,7 +37,7 @@ version = 0.1
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
-# version.filename = %(source.dir)s/interface.py
+# version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
@@ -404,7 +406,7 @@ ios.codesign.allowed = false
 [buildozer]
 
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
-log_level = 2
+log_level = 1
 
 # (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
