@@ -433,8 +433,43 @@ class MyApp(App):
                 self.status_bar.text = "Выберите активный слой справа!"
 
     def build(self):
-        if platform == 'android':
-            ask_android_permissions()
+        from kivy.utils import platform
+
+# Настройка запроса разрешений для Android
+if platform == 'android':
+    from jnius import autoclass
+    from android.permissions import request_permissions, Permission
+
+    def request_android_storage_permission():
+        # Подключаем необходимые Java-классы Android
+        Environment = autoclass('android.os.Environment')
+        Build = autoclass('android.os.Build$VERSION')
+        
+        # Проверяем: если Android 11 (API 30) и выше
+        if Build.SDK_INT >= 30:
+            # Если разрешение "Управление всеми файлами" еще не получено
+            if not Environment.isExternalStorageManager():
+                try:
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    Intent = autoclass('android.content.Intent')
+                    Settings = autoclass('android.provider.Settings')
+                    Uri = autoclass('android.net.Uri')
+                    
+                    activity = PythonActivity.mActivity
+                    # Создаем намерение (Intent) открыть системные настройки для нашего приложения
+                    intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    uri = Uri.fromParts("package", activity.getPackageName(), None)
+                    intent.setData(uri)
+                    # Перенаправляем пользователя в настройки
+                    activity.startActivity(intent)
+                except Exception as e:
+                    print(f"Не удалось открыть настройки разрешений: {e}")
+        else:
+            # Для старых версий Android (10 и ниже) вызываем обычное всплывающее окно
+            request_permissions([
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.WRITE_EXTERNAL_STORAGE
+            ])
             
         
         main_layout = BoxLayout(orientation='vertical')
