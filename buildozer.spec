@@ -55,7 +55,7 @@ android.enable_androidx = True
 android.allow_backup = True
 
 android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
-
+android.manifest.application_user_requested_legacy_external_storage = true
 
 [buildozer]
 
