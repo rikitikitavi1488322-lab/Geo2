@@ -59,6 +59,16 @@ if platform == 'android':
                 Permission.READ_EXTERNAL_STORAGE,
                 Permission.WRITE_EXTERNAL_STORAGE
             ])
+            
+def get_storage_path():
+    if platform == 'android':
+        try:
+            from jnius import autoclass
+            Environment = autoclass('android.os.Environment')
+            return Environment.getExternalStorageDirectory().getAbsolutePath()
+        except Exception:
+            return '/storage/emulated/0'
+    return os.getcwd()
 
 width = Window.width
 height = Window.height
@@ -80,7 +90,7 @@ class FileLoadDialog(Popup):
         
         # Проводник
         self.file_chooser = FileChooserListView(
-            path=os.getcwd(), 
+            path=get_storage_path(), 
             filters=filters if filters else ['*']
         )
         layout.add_widget(self.file_chooser)
@@ -114,7 +124,7 @@ class FileSaveDialog(Popup):
         layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
         # Проводник для выбора директории сохранения
-        self.file_chooser = FileChooserListView(path=os.getcwd())
+        self.file_chooser = FileChooserListView(path=get_storage_path())
         layout.add_widget(self.file_chooser)
 
         # Поле для ввода имени файла
