@@ -54,7 +54,7 @@ android.enable_androidx = True
 # (bool) Разрешить резервное копирование данных приложения
 android.allow_backup = True
 
-android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+android.permissions = MANAGE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
 android.manifest.application_user_requested_legacy_external_storage = true
 
 [buildozer]
