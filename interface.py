@@ -22,6 +22,18 @@ import threading
 import main
 import clas
 
+from kivy.utils import platform
+
+# Если код запущен на Android, подключаем инструменты для запроса разрешений
+if platform == 'android':
+    from android.permissions import request_permissions, Permission
+    
+    def ask_android_permissions():
+        request_permissions([
+            Permission.READ_EXTERNAL_STORAGE,
+            Permission.WRITE_EXTERNAL_STORAGE
+        ])
+
 width = Window.width
 height = Window.height
 
@@ -421,6 +433,10 @@ class MyApp(App):
                 self.status_bar.text = "Выберите активный слой справа!"
 
     def build(self):
+        if platform == 'android':
+            ask_android_permissions()
+            
+        
         main_layout = BoxLayout(orientation='vertical')
         
         contral_panel = BoxLayout(orientation='horizontal', size_hint_y=0.06, spacing=5)
