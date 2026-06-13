@@ -24,7 +24,8 @@ version = 0.1
 
 # (list) Все библиотеки, от которых зависит проект.
 # Обязательно указываем pillow и numpy для работы с графикой и матрицами
-requirements = python3, kivy, pillow, numpy
+# Добавлены: scipy для обработки DEM/высот, matplotlib для отрисовки карт, networkx для графов маршрутов
+requirements = python3, kivy, pillow, numpy, scipy, matplotlib, networkx
 
 # (str) Ориентация экрана (выставлена альбомная, как в твоих логах)
 orientation = landscape
