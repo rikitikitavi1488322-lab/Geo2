@@ -24,6 +24,7 @@ import clas
 
 from kivy.utils import platform
 
+
 # Настройка запроса разрешений для Android
 if platform == 'android':
     from jnius import autoclass

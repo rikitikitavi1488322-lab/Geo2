@@ -1,5 +1,4 @@
 from PIL import Image, ImageFilter
-from skimage.color import rgb2lab, lab2rgb
 import random
 import math
 import json
@@ -130,6 +129,80 @@ def filter_isolated_pixels():
                 filtered_pix.add(pt)
         s.sp_pix = filtered_pix
 
+
+def rgb2lab(rgb_array):
+    """ Полная замена skimage.color.rgb2lab для массивов (H, W, 3) """
+    arr = np.array(rgb_array, dtype=np.float64) / 255.0
+    
+    # sRGB в Linear RGB
+    mask = arr > 0.04045
+    arr[mask] = ((arr[mask] + 0.055) / 1.055) ** 2.4
+    arr[~mask] = arr[~mask] / 12.92
+    
+    # Linear RGB в XYZ (стандарт D65)
+    X = arr[..., 0] * 0.4124564 + arr[..., 1] * 0.3575761 + arr[..., 2] * 0.1804375
+    Y = arr[..., 0] * 0.2126729 + arr[..., 1] * 0.7151522 + arr[..., 2] * 0.0721750
+    Z = arr[..., 0] * 0.0193339 + arr[..., 1] * 0.1191920 + arr[..., 2] * 0.9503041
+    
+    # Нормализация для D65
+    X /= 0.95047
+    Z /= 1.08883
+    
+    # Функция f(t) для перехода к LAB
+    def f(t):
+        res = np.empty_like(t)
+        m = t > 0.008856
+        res[m] = t[m] ** (1.0 / 3.0)
+        res[~m] = 7.787 * t[~m] + 16.0 / 116.0
+        return res
+        
+    fx = f(X)
+    fy = f(Y)
+    fz = f(Z)
+    
+    L = 116.0 * fy - 16.0
+    a = 500.0 * (fx - fy)
+    b = 200.0 * (fy - fz)
+    
+    return np.stack([L, a, b], axis=-1)
+
+def lab2rgb(lab_matrix):
+    """ Полная замена skimage.color.lab2rgb """
+    lab = np.array(lab_matrix, dtype=np.float64)
+    L = lab[..., 0]
+    a = lab[..., 1]
+    b = lab[..., 2]
+    
+    fy = (L + 16.0) / 116.0
+    fx = a / 500.0 + fy
+    fz = fy - b / 200.0
+    
+    def f_inv(t):
+        res = np.empty_like(t)
+        m = t > 0.206897
+        res[m] = t[m] ** 3
+        res[~m] = (t[~m] - 16.0 / 116.0) / 7.787
+        return res
+        
+    X = f_inv(fx) * 0.95047
+    Y = f_inv(fy) * 1.00000
+    Z = f_inv(fz) * 1.08883
+    
+    # XYZ в Linear RGB
+    r = X *  3.2404542 + Y * -1.5371385 + Z * -0.4985314
+    g = X * -0.9692660 + Y *  1.8760108 + Z *  0.0415560
+    b = X *  0.0556434 + Y * -0.2040259 + Z *  1.0572252
+    
+    rgb = np.stack([r, g, b], axis=-1)
+    rgb = np.clip(rgb, 0, 1)
+    
+    # Linear RGB в sRGB
+    m = rgb > 0.0031308
+    rgb[m] = 1.055 * (rgb[m] ** (1.0 / 2.4)) - 0.055
+    rgb[~m] = rgb[~m] * 12.92
+    
+    return rgb
+
 def lab_to_rgb_tuple(lab_color):
     # lab2rgb ожидает массив, поэтому оборачиваем в список списков
     rgb_float = lab2rgb([[lab_color]])[0][0]  # Возвращает значения от 0.0 до 1.0
@@ -141,8 +214,7 @@ def add_new_empty_layer(name, rgb_color):
         if str(layer.name) == str(name):
             return False, "Слой с таким именем уже существует!"
 
-    # Конвертируем RGB в LAB для корректной работы алгоритма расстояний
-    from skimage.color import rgb2lab
+
     import numpy as np
     rgb_norm = np.array([[[rgb_color[0] / 255.0, rgb_color[1] / 255.0, rgb_color[2] / 255.0]]])
     lab_color = tuple(rgb2lab(rgb_norm)[0][0])
