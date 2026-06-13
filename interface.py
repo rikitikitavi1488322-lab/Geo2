@@ -260,11 +260,12 @@ class MyApp(App):
             return
 
         def background_work():
-            # Создайте папку 'dem_data' в директории проекта и положите туда нужные .hgt файлы
             success = main.compute_all_elevations(hgt_folder="dem_data")
             if success:
-            # Обновляем UI по завершению (безопасно для Kivy через Clock)
+                # Обновляем UI по завершению (безопасно для Kivy через Clock)
                 Clock.schedule_once(lambda dt: self.show_popup_message("Успех", "Данные высот загружены!"), 0)
+            else:
+                Clock.schedule_once(lambda dt: self.show_popup_message("Ошибка", "Не удалось загрузить данные высот. Проверьте файлы в dem_data."), 0)
 
         threading.Thread(target=background_work, daemon=True).start()
 
@@ -292,25 +293,24 @@ class MyApp(App):
         dialog.open()
 
     def save_project_success(self, full_path):
-    # Автоматически добавляем расширение json, если пользователь забыл его ввести
+        # Автоматически добавляем расширение json, если пользователь забыл его ввести
         if not full_path.lower().endswith('.json'):
             full_path += '.json'
         
         try:
-        # Вызываем функцию сохранения из вашего модуля main.py
-            success = main.save_project(full_path) 
+            # Вызываем функцию сохранения из вашего модуля main.py
+            success = main.save_project(full_path)
             if success:
                 print(f"Проект сохранен по пути: {full_path}")
         except Exception as e:
             print(f"Ошибка при сохранении: {e}")
             
     def load_project_dialog(self):
-
         dialog = FileLoadDialog(
-        title="Выберите файл проекта JSON",
-        filters=['*.json'],
-        on_success=self.load_project_success
-    )
+            title="Выберите файл проекта JSON",
+            filters=['*.json'],
+            on_success=self.load_project_success
+        )
         dialog.open()
 
     def load_project_success(self, path):
@@ -475,7 +475,7 @@ class MyApp(App):
         
         main_layout = BoxLayout(orientation='vertical')
         
-        contral_panel = BoxLayout(orientation='horizontal', size_hint_y=0.06, spacing=5)
+        contral_panel = BoxLayout(orientation='horizontal', size_hint_y=0.09, spacing=5)
         contral_panel.add_widget(self.menu_btn)
         contral_panel.add_widget(self.tools_menu_btn)
         contral_panel.add_widget(self.exit_btn)
@@ -512,17 +512,15 @@ class MyApp(App):
         mode_draw.bind(on_release=lambda instance: self.dropdown_tools.select('rejim_karandasha'))
         mode_erase = Button(text='Ластик', size_hint_y=None, height='50dp')
         mode_erase.bind(on_release=lambda instance: self.dropdown_tools.select('rejim_lastika'))
-        
+        mode_geo = Button(text='Привязка', size_hint_y=None, height='50dp')
+        mode_geo.bind(on_release=lambda instance: self.dropdown_tools.select('rejim_geotocki'))
+
         self.dropdown_tools.add_widget(mode_view)
         self.dropdown_tools.add_widget(mode_draw)
         self.dropdown_tools.add_widget(mode_erase)
+        self.dropdown_tools.add_widget(mode_geo)
         self.tools_menu_btn.bind(on_release=self.dropdown_tools.open)
         self.dropdown_tools.bind(on_select=self.tools_select_handler)
-        
-        
-        mode_geo = Button(text='Привязка', size_hint_y=None, height='50dp')
-        mode_geo.bind(on_release=lambda instance: self.dropdown_tools.select('rejim_geotocki'))
-        self.dropdown_tools.add_widget(mode_geo)
         
         self.status_bar = Label(text="Ожидание действий. Откройте Меню.", size_hint_y=0.04, color=(0.9, 1, 0.9, 1))
         with self.status_bar.canvas.before:
@@ -833,9 +831,9 @@ class FastPixelLayer(Widget):
                         if mode == 'draw':
                             if pt not in target_layer_data.sp_pix:
                                 target_layer_data.sp_pix.add(pt)
-                                self.buffer[idx] = self.layer_color[0]
-                                self.buffer[idx+1] = self.layer_color[1]
-                                self.buffer[idx+2] = self.layer_color[2]
+                                self.buffer[idx] = int(self.layer_color[0] * 255)
+                                self.buffer[idx+1] = int(self.layer_color[1] * 255)
+                                self.buffer[idx+2] = int(self.layer_color[2] * 255)
                                 self.buffer[idx+3] = 255
                                 changed = True
                                 

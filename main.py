@@ -1,4 +1,5 @@
 from PIL import Image, ImageFilter
+from skimage.color import rgb2lab, lab2rgb
 import random
 import math
 import json
@@ -17,13 +18,17 @@ elevation_matrix = None
 status_message = "Система готова"
 karta = 'geo2.jpg'
 
+sample_processed = None
+
 # Настройки вычислений (изменяются через интерфейс)
 k_clusters = 20      
 blur_radius = 2     
-min_d2 = 850        
+min_d2 = 200        
 
 slovar_pix = {}
+slovar_pix_lab = {}
 list_of_rgb = []
+list_of_lab = []
 sp_sloy = []
 
 # Размеры изображения (будут перезаписаны при открытии)
@@ -32,7 +37,7 @@ y = 0
 pixels = None
 
 def open_file(karta_input):
-    global pixels, x, y, blur_radius
+    global pixels, x, y, blur_radius, sample_processed
     sample = Image.open(karta_input)
     sample = sample.convert('RGB')
     
@@ -41,16 +46,29 @@ def open_file(karta_input):
     
     pixels = sample.load()
     x, y = sample.size
+    sample_processed = sample
+
+
 
 def izv():
     print('Извлечение пикселей...')
     list_of_rgb.clear()
+    list_of_lab.clear()
     slovar_pix.clear()
+    slovar_pix_lab.clear()
+    
+    img_np = np.array(sample_processed)
+    img_lab = rgb2lab(img_np)
+    
     for px in range(x):
         for py in range(y):
             color = pixels[px, py]
+            color_lab = tuple(img_lab[py, px])
+            
             slovar_pix[(px, py)] = color  
+            slovar_pix_lab[(px, py)] = color_lab
             list_of_rgb.append(color)
+            list_of_lab.append(color_lab)
 
 def run_kmeans(data, k=20, max_iters=10):
     print(f'Запуск K-Means кластеризации (K={k})...')
@@ -66,12 +84,12 @@ def run_kmeans(data, k=20, max_iters=10):
         sample_data = random.sample(data, min(5000, len(data)))
         
         for color in sample_data:
-            r1, g1, b1 = color
+            l1, a1, b1 = color
             min_dist = float('inf')
             closest_idx = 0
             for idx, cent in enumerate(centroids):
-                r2, g2, b2 = cent
-                d2 = (r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2
+                l2, a2, b2 = cent
+                d2 = (l1 - l2)**2 + (a1 - a2)**2 + (b1 - b2)**2
                 if d2 < min_dist:
                     min_dist = d2
                     closest_idx = idx
@@ -82,11 +100,11 @@ def run_kmeans(data, k=20, max_iters=10):
             if not cluster:
                 new_centroids.append(centroids[idx])
                 continue
-            sum_r = sum(c[0] for c in cluster)
-            sum_g = sum(c[1] for c in cluster)
+            sum_l = sum(c[0] for c in cluster)
+            sum_a = sum(c[1] for c in cluster)
             sum_b = sum(c[2] for c in cluster)
             cnt = len(cluster)
-            new_centroids.append((int(sum_r/cnt), int(sum_g/cnt), int(sum_b/cnt)))
+            new_centroids.append((sum_l/cnt, sum_a/cnt, sum_b/cnt))
             
         if centroids == new_centroids:
             break
@@ -112,14 +130,24 @@ def filter_isolated_pixels():
                 filtered_pix.add(pt)
         s.sp_pix = filtered_pix
 
+def lab_to_rgb_tuple(lab_color):
+    # lab2rgb ожидает массив, поэтому оборачиваем в список списков
+    rgb_float = lab2rgb([[lab_color]])[0][0]  # Возвращает значения от 0.0 до 1.0
+    return tuple(int(c * 255) for c in rgb_float)
 
 def add_new_empty_layer(name, rgb_color):
     global sp_sloy, min_d2
     for layer in sp_sloy:
         if str(layer.name) == str(name):
             return False, "Слой с таким именем уже существует!"
-            
-    raspred.create_custom_layer(name, rgb_color, sp_sloy, min_d2)
+
+    # Конвертируем RGB в LAB для корректной работы алгоритма расстояний
+    from skimage.color import rgb2lab
+    import numpy as np
+    rgb_norm = np.array([[[rgb_color[0] / 255.0, rgb_color[1] / 255.0, rgb_color[2] / 255.0]]])
+    lab_color = tuple(rgb2lab(rgb_norm)[0][0])
+
+    raspred.create_custom_layer(name, rgb_color, lab_color, sp_sloy, min_d2)
     return True, "Слой успешно создан"
 
 def main_all(karta_input):
@@ -133,20 +161,22 @@ def main_all(karta_input):
     izv()
     
     status_message = "Шаг 3/5: Вычисление базовых классов (K-Means)..."
-    unique_colors = list(set(list_of_rgb))
+    unique_colors = list(set(list_of_lab))
     centroids = run_kmeans(unique_colors, k=k_clusters, max_iters=8)
     
     status_message = "Шаг 4/5: Генерация векторов слоев..."
     sp_sloy.clear()
-    for idx, color in enumerate(centroids):
-        raspred.detect_clas(idx + 1, color, sp_sloy)
+    for idx, lab_color in enumerate(centroids):
+        
+        rgb_color = lab_to_rgb_tuple(lab_color)
+        raspred.detect_clas(idx + 1, rgb_color, lab_color, sp_sloy)
         sp_sloy[-1].max_d2 = min_d2
         
     print(f'Создано базовых слоев: {len(sp_sloy)}')
     
     status_message = "Шаг 5/5: Распределение пикселей по дистанции..."
-    for c1, c2 in slovar_pix.items():
-        raspred.detect_d(c1, c2, sp_sloy)
+    for c1, c2_lab in slovar_pix_lab.items():
+        raspred.detect_d(c1, c2_lab, sp_sloy)
         
     status_message = "Пост-обработка: Очистка геометрии от шума..."
     filter_isolated_pixels()
@@ -270,8 +300,9 @@ def compute_all_elevations(hgt_folder="dem_data"):
             
     print("Глобальная матрица высот успешно построена!")
     return True
-
-# В самом конце твоего файла main.py:
+    
 if __name__ == "__main__":
+
     from interface import MyApp
+
     MyApp().run()
