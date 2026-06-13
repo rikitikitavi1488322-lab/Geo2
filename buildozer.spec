@@ -25,7 +25,7 @@ version = 0.1
 # (list) Все библиотеки, от которых зависит проект.
 # Обязательно указываем pillow и numpy для работы с графикой и матри��ами
 # Добавлена scikit-image для преобразований цветовых пространств (RGB↔LAB)
-requirements = python3, kivy, pillow, numpy, scikit-image
+requirements = python3, kivy, pillow, numpy
 
 # (str) Ориентация экрана (выставлена альбомная, как в твоих логах)
 orientation = landscape
